@@ -19,7 +19,7 @@
 #ifndef __SDIO_DEVICE_H
 #define __SDIO_DEVICE_H
 
-#include "stm32f4xx_hal.h"
+#include "stm32l4xx_hal.h"
 
   /* Typedefs */
 
@@ -49,8 +49,9 @@
 /**
   * @brief  SD status structure definition  
   */
-#define MSD_OK ((uint8_t)0x00)
-#define MSD_ERROR ((uint8_t)0x01)
+#define MSD_OK                        ((uint8_t)0x00)
+#define MSD_ERROR                     ((uint8_t)0x01)
+#define MSD_ERROR_SD_NOT_PRESENT      ((uint8_t)0x02)
 
 /** 
   * @brief  SD transfer state definition  

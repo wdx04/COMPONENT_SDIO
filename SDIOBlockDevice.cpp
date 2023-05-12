@@ -15,8 +15,7 @@
  */
 
 #include <errno.h>
-#include "platform/mbed_debug.h"
-#include "platform/mbed_wait_api.h"
+#include "mbed.h"
 #include "SDIOBlockDevice.h"
 
 namespace mbed
@@ -199,24 +198,28 @@ int SDIOBlockDevice::read(void *buffer, bd_addr_t addr, bd_size_t size)
         }
     }
 
+#if defined (__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
+    uint32_t alignedAddr = (uint32_t)buffer & ~0x1F;
+    SCB_CleanDCache_by_Addr((uint32_t*)alignedAddr, size + ((uint32_t)buffer - alignedAddr));
+#endif
+
     // receive the data : one block/ multiple blocks is handled in ReadBlocks()
     int status = SD_ReadBlocks_DMA(_buffer, addr, blockCnt);
-    debug_if(SD_DBG, "ReadBlocks dbgtest addr: %lld  blockCnt: %lld \n", addr, blockCnt);
+    debug_if(SD_DBG, "ReadBlocksDMA dbgtest addr: %lld  blockCnt: %lld status: %d\n", addr, blockCnt, status);
 
     if (status == MSD_OK)
     {
         // wait until DMA finished
-        uint32_t tickstart = HAL_GetTick();
-        while (SD_DMA_ReadPending() != SD_TRANSFER_OK)
+        sleep_manager_lock_deep_sleep();
+        int transfer_result = SD_DMA_WaitForReadCplt(MBED_CONF_SD_TIMEOUT);
+        sleep_manager_unlock_deep_sleep();
+        if(transfer_result != SD_TRANSFER_OK)
         {
-            if ((HAL_GetTick() - tickstart) >= MBED_CONF_SD_TIMEOUT)
-            {
-                unlock();
-                return SD_BLOCK_DEVICE_ERROR_READBLOCKS;
-            }
+            unlock();
+            return SD_BLOCK_DEVICE_ERROR_READBLOCKS;
         }
         // make sure card is ready
-        tickstart = HAL_GetTick();
+        uint32_t tickstart = HAL_GetTick();
         while (SD_GetCardState() != SD_TRANSFER_OK)
         {
             // wait until SD ready
@@ -224,6 +227,10 @@ int SDIOBlockDevice::read(void *buffer, bd_addr_t addr, bd_size_t size)
             {
                 unlock();
                 return SD_BLOCK_DEVICE_ERROR_READBLOCKS;
+            }
+            else
+            {
+                rtos::ThisThread::yield();
             }
         }
     }
@@ -234,7 +241,12 @@ int SDIOBlockDevice::read(void *buffer, bd_addr_t addr, bd_size_t size)
         return SD_BLOCK_DEVICE_ERROR_READBLOCKS;
     }
 
+#if defined (__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
+    SCB_InvalidateDCache_by_Addr((uint32_t*)alignedAddr, size + ((uint32_t) buffer - alignedAddr));
+#endif
+
     unlock();
+    debug_if(SD_DBG, "ReadBlocks returned with status %d. addr: %lld  blockCnt: %lld \n", status, addr, blockCnt);
     return status;
 }
 
@@ -280,23 +292,27 @@ int SDIOBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size)
         }
     }
 
+#if defined (__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
+    uint32_t alignedAddr = (uint32_t)buffer &  ~0x1F;
+    SCB_CleanDCache_by_Addr((uint32_t*)alignedAddr, size + ((uint32_t)buffer - alignedAddr));
+#endif
+
     int status = SD_WriteBlocks_DMA(_buffer, addr, blockCnt);
     debug_if(SD_DBG, "WriteBlocks dbgtest addr: %lld  blockCnt: %lld \n", addr, blockCnt);
 
     if (status == MSD_OK)
     {
         // wait until DMA finished
-        uint32_t tickstart = HAL_GetTick();
-        while (SD_DMA_WritePending() != SD_TRANSFER_OK)
+        sleep_manager_lock_deep_sleep();
+        int transfer_result = SD_DMA_WaitForWriteCplt(MBED_CONF_SD_TIMEOUT);
+        sleep_manager_unlock_deep_sleep();
+        if(transfer_result != SD_TRANSFER_OK)
         {
-            if ((HAL_GetTick() - tickstart) >= MBED_CONF_SD_TIMEOUT)
-            {
-                unlock();
-                return SD_BLOCK_DEVICE_ERROR_WRITEBLOCKS;
-            }
+            unlock();
+            return SD_BLOCK_DEVICE_ERROR_WRITEBLOCKS;
         }
         // make sure card is ready
-        tickstart = HAL_GetTick();
+        uint32_t tickstart = HAL_GetTick();
         while (SD_GetCardState() != SD_TRANSFER_OK)
         {
             // wait until SD ready
@@ -304,6 +320,10 @@ int SDIOBlockDevice::program(const void *buffer, bd_addr_t addr, bd_size_t size)
             {
                 unlock();
                 return SD_BLOCK_DEVICE_ERROR_WRITEBLOCKS;
+            }
+            else
+            {
+                rtos::ThisThread::yield();
             }
         }
     }
