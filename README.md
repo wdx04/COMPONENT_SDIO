@@ -11,20 +11,15 @@ The software is provided under [Apache-2.0 license](LICENSE). Contributions to t
 This is an implementation for a blockdevice to use SDHC cards via SDIO interface.
 
 ## Supported Hardware
-- STM32F1
 - STM32F4
 - STM32F7
-- STM32L4
-- STM32H7
-
-Note: For MCUs with multiple SDMMC instances, only SDMMC1 is supported.
 
 ## Tested Hardware
-- AliOS Things STM32L496VG Developer Kit
-- Boring-Tech STM32L431RC Core Board
-- QIMINGXINXIN STM32F407ZG V5.1 Board
-- FANKE STM32H7B0VB Core Board
-- PUZHONG STM32F103ZE Z100 Board
+- STM Discovery board 32F469IDISCOVERY, Targetname: DISCO_F469NI
+  https://os.mbed.com/platforms/ST-Discovery-F469NI/
+- STM Discovery board 32F746IDISCOVERY, Targetname: DISCO_F746NG
+  https://os.mbed.com/platforms/ST-Discovery-F746NG/
+  
   
 ## Driver Description
 This SDIOBlockdevice inherits from Blockdevice. The implementation uses an intermediate layer for the target specific code. This version uses the STM HAL 
@@ -32,3 +27,5 @@ for the SD card communication, an approach that is not fully mBed compliant. So 
 
 ## Usage
 The driver is used like other blockdevices, a good starting point is https://github.com/ARMmbed/mbed-os-example-filesystem
+
+

@@ -1,0 +1,7 @@
+{
+    "name": "stm-sdio",
+    "config": {
+        "FSFAT_SDCARD_INSTALLED": 1,
+        "CMD_TIMEOUT": 30000
+    }
+}
